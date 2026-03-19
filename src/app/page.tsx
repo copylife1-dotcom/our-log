@@ -29,7 +29,6 @@ export default function MissionControlCalendar() {
   const [activePerson, setActivePerson] = useState<'홍윤' | '윤우' | '우리함께'>('홍윤');
   const [dDay, setDDay] = useState(0);
   
-  // 🔥 삭제 확인창 상태 관리
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -87,33 +86,21 @@ export default function MissionControlCalendar() {
       event_date: date
     }));
 
-    const { data, error } = await supabase.from('events').insert(inserts).select();
+    const { error } = await supabase.from('events').insert(inserts);
 
     if (error) {
       alert("금고 저장 실패! 막내를 부르십시오.");
       return;
     }
 
-    if (data) {
-      setEvents(prev => {
-        const next = { ...prev };
-        data.forEach(newEvent => {
-          if (!next[newEvent.event_date]) next[newEvent.event_date] = [];
-          next[newEvent.event_date].push(newEvent);
-        });
-        return next;
-      });
-      closeModal();
-    }
+    await fetchEvents();
+    closeModal();
   };
 
   const deleteSingleEvent = async (id: string, date: string) => {
     const { error } = await supabase.from('events').delete().eq('id', id);
     if (!error) {
-      setEvents(prev => ({
-        ...prev,
-        [date]: prev[date].filter(ev => ev.id !== id)
-      }));
+      await fetchEvents(); 
       setDeleteConfirmId(null);
     }
   };
@@ -124,7 +111,7 @@ export default function MissionControlCalendar() {
       .eq('person', evToDelete.person);
       
     if (!error) {
-      fetchEvents(); 
+      await fetchEvents(); 
       setDeleteConfirmId(null);
     }
   };
@@ -200,17 +187,20 @@ export default function MissionControlCalendar() {
             {['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'].map((d, i) => <div key={d} className={i === 0 ? 'text-rose-300' : i === 6 ? 'text-sky-300' : ''}>{d}</div>)}
           </div>
           <div className="grid grid-cols-7 text-center gap-1.5">
-            {blanks.map(b => <div key={`b-${b}`} className="min-h-[4.5rem] bg-violet-50/30 rounded-xl pointer-events-none" />)}
+            {/* 🔥 칸 높이를 살짝 늘려서(4.5rem -> 5.5rem) 3개가 들어가도 여유롭게 세팅했습니다! */}
+            {blanks.map(b => <div key={`b-${b}`} className="min-h-[5.5rem] bg-violet-50/30 rounded-xl pointer-events-none" />)}
             {days.map(day => {
               const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
               const dayEvents = events[dateStr] || [];
               const isToday = new Date().toDateString() === new Date(year, month, day).toDateString();
               return (
                 <div key={day} onClick={() => { setSelectedDate(dateStr); setIsModalOpen(true); }}
-                  className={`relative flex flex-col items-center justify-start pt-2 pb-1 rounded-xl transition-all min-h-[4.5rem] overflow-hidden cursor-pointer ${isToday ? 'bg-violet-50 border border-violet-200 shadow-inner' : 'bg-white border border-transparent hover:bg-violet-50/50'}`}>
+                  className={`relative flex flex-col items-center justify-start pt-2 pb-1 rounded-xl transition-all min-h-[5.5rem] overflow-hidden cursor-pointer ${isToday ? 'bg-violet-50 border border-violet-200 shadow-inner' : 'bg-white border border-transparent hover:bg-violet-50/50'}`}>
                   <span className={`text-sm font-black mb-1.5 ${isToday ? 'text-violet-700' : 'text-slate-600'}`}>{day}</span>
-                  <div className="w-full px-1 flex flex-col gap-1">
-                    {dayEvents.slice(0, 2).map((ev, i) => {
+                  <div className="w-full px-1 flex flex-col gap-1 items-center">
+                    
+                    {/* 🔥 slice(0, 2) 족쇄를 풀고 slice(0, 3)으로 확장했습니다! */}
+                    {dayEvents.slice(0, 3).map((ev, i) => {
                       let badgeClass = "bg-violet-50 text-violet-600";
                       if (ev.person === '홍윤') badgeClass = "bg-blue-50/80 text-blue-600";
                       else if (ev.person === '윤우') badgeClass = "bg-pink-50/80 text-pink-600";
@@ -222,13 +212,19 @@ export default function MissionControlCalendar() {
                         </div>
                       );
                     })}
+                    
+                    {/* 🔥 4개 이상일 때 나타나는 센스만점 배지 */}
+                    {dayEvents.length > 3 && (
+                      <div className="text-[8px] font-black text-violet-400 bg-violet-50/80 rounded-full px-1.5 py-0.5 mt-0.5 w-max">
+                        +{dayEvents.length - 3}
+                      </div>
+                    )}
                   </div>
                 </div>
               );
             })}
           </div>
           
-          {/* 🔥 형님의 스윗한 로맨틱 멘트로 전격 교체! */}
           <div className="text-center text-[11px] text-violet-300 font-black mt-8 tracking-widest opacity-80">
             공주야 사랑해
           </div>
@@ -274,7 +270,6 @@ export default function MissionControlCalendar() {
                           )}
                         </div>
                         
-                        {/* 🔥 에러 잡은 고급 삭제 메뉴 (인식표 key 장착 완료!) */}
                         <AnimatePresence>
                           {isConfirming && (
                             <motion.div 
