@@ -28,6 +28,9 @@ export default function MissionControlCalendar() {
   const [eventText, setEventText] = useState("");
   const [activePerson, setActivePerson] = useState<'홍윤' | '윤우' | '우리함께'>('홍윤');
   const [dDay, setDDay] = useState(0);
+  
+  // 🔥 삭제 확인창 상태 관리
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   useEffect(() => {
     setIsMounted(true);
@@ -100,24 +103,40 @@ export default function MissionControlCalendar() {
         });
         return next;
       });
-      setIsModalOpen(false);
-      setEventText("");
-      setEndDate("");
-      setActivePerson('홍윤');
+      closeModal();
     }
   };
 
-  const deleteEvent = async (id: string, date: string) => {
+  const deleteSingleEvent = async (id: string, date: string) => {
     const { error } = await supabase.from('events').delete().eq('id', id);
     if (!error) {
       setEvents(prev => ({
         ...prev,
         [date]: prev[date].filter(ev => ev.id !== id)
       }));
+      setDeleteConfirmId(null);
     }
   };
 
-  // 🔥 고급 스와이프 감지 엔진
+  const deleteAllRelatedEvents = async (evToDelete: Event) => {
+    const { error } = await supabase.from('events').delete()
+      .eq('text', evToDelete.text)
+      .eq('person', evToDelete.person);
+      
+    if (!error) {
+      fetchEvents(); 
+      setDeleteConfirmId(null);
+    }
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setEventText("");
+    setEndDate("");
+    setActivePerson('홍윤');
+    setDeleteConfirmId(null);
+  };
+
   const handleDragEnd = (event: any, info: any) => {
     const swipeThreshold = 50; 
     if (info.offset.x < -swipeThreshold) {
@@ -166,7 +185,6 @@ export default function MissionControlCalendar() {
           </div>
         </div>
 
-        {/* 🔥 여기에 스와이프 기능(drag)을 복구했습니다! */}
         <motion.div 
           key={month}
           initial={{ opacity: 0, x: 30 }} 
@@ -188,7 +206,7 @@ export default function MissionControlCalendar() {
               const dayEvents = events[dateStr] || [];
               const isToday = new Date().toDateString() === new Date(year, month, day).toDateString();
               return (
-                <div key={day} onClick={() => { setSelectedDate(dateStr); setEventText(""); setEndDate(""); setIsModalOpen(true); }}
+                <div key={day} onClick={() => { setSelectedDate(dateStr); setIsModalOpen(true); }}
                   className={`relative flex flex-col items-center justify-start pt-2 pb-1 rounded-xl transition-all min-h-[4.5rem] overflow-hidden cursor-pointer ${isToday ? 'bg-violet-50 border border-violet-200 shadow-inner' : 'bg-white border border-transparent hover:bg-violet-50/50'}`}>
                   <span className={`text-sm font-black mb-1.5 ${isToday ? 'text-violet-700' : 'text-slate-600'}`}>{day}</span>
                   <div className="w-full px-1 flex flex-col gap-1">
@@ -210,9 +228,9 @@ export default function MissionControlCalendar() {
             })}
           </div>
           
-          {/* 스와이프 안내 문구 (은은하게) */}
-          <div className="text-center text-[10px] text-violet-200 font-bold mt-6 tracking-widest opacity-50">
-            SWIPE TO CHANGE MONTH
+          {/* 🔥 형님의 스윗한 로맨틱 멘트로 전격 교체! */}
+          <div className="text-center text-[11px] text-violet-300 font-black mt-8 tracking-widest opacity-80">
+            공주야 사랑해
           </div>
         </motion.div>
 
@@ -221,7 +239,7 @@ export default function MissionControlCalendar() {
             <motion.div 
               initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", damping: 25, stiffness: 200 }}
               className="fixed inset-0 z-[100] bg-violet-950/15 backdrop-blur-sm flex items-end justify-center"
-              onClick={() => setIsModalOpen(false)}
+              onClick={closeModal}
             >
               <div className="w-full max-w-[430px] bg-white rounded-t-[2.5rem] p-8 shadow-2xl max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
                 
@@ -233,7 +251,7 @@ export default function MissionControlCalendar() {
                       <input type="date" min={selectedDate} value={endDate} onChange={(e) => setEndDate(e.target.value)} className="bg-transparent text-violet-700 text-sm font-black outline-none w-full cursor-pointer" />
                     </div>
                   </div>
-                  <button onClick={() => { setIsModalOpen(false); setEndDate(""); }} className="bg-slate-50 hover:bg-slate-100 text-slate-400 px-4 py-4 rounded-2xl text-xs font-black transition-colors mt-1">✕</button>
+                  <button onClick={closeModal} className="bg-slate-50 hover:bg-slate-100 text-slate-400 px-4 py-4 rounded-2xl text-xs font-black transition-colors mt-1">✕</button>
                 </div>
 
                 <div className="space-y-3 mb-8">
@@ -243,10 +261,41 @@ export default function MissionControlCalendar() {
                     else if (ev.person === '윤우') cardClass = "bg-pink-50/50 border-pink-100 text-pink-800";
                     else if (ev.person === '우리함께') cardClass = "bg-emerald-50/50 border-emerald-100 text-emerald-800"; 
 
+                    const isConfirming = deleteConfirmId === ev.id;
+
                     return (
-                      <div key={ev.id} className={`flex justify-between items-center p-4 rounded-2xl border ${cardClass}`}>
-                        <span className="text-[13px] font-black">[{ev.person}] {ev.text}</span>
-                        <button onClick={() => deleteEvent(ev.id, selectedDate)} className="text-slate-300 hover:text-red-400 text-xs font-bold transition-colors">삭제</button>
+                      <div key={ev.id} className={`flex flex-col p-4 rounded-2xl border transition-all ${cardClass}`}>
+                        <div className="flex justify-between items-center w-full">
+                          <span className="text-[13px] font-black">[{ev.person}] {ev.text}</span>
+                          {!isConfirming && (
+                            <button onClick={() => setDeleteConfirmId(ev.id)} className="text-slate-400 hover:text-red-400 text-xs font-bold transition-colors">
+                              삭제
+                            </button>
+                          )}
+                        </div>
+                        
+                        {/* 🔥 에러 잡은 고급 삭제 메뉴 (인식표 key 장착 완료!) */}
+                        <AnimatePresence>
+                          {isConfirming && (
+                            <motion.div 
+                              key="delete-confirm-menu"
+                              initial={{ height: 0, opacity: 0, marginTop: 0 }} 
+                              animate={{ height: 'auto', opacity: 1, marginTop: 12 }} 
+                              exit={{ height: 0, opacity: 0, marginTop: 0 }}
+                              className="flex gap-2 overflow-hidden"
+                            >
+                              <button onClick={() => deleteSingleEvent(ev.id, selectedDate)} className="flex-1 bg-white/60 hover:bg-white text-violet-600 py-2.5 rounded-xl text-[11px] font-black transition-colors shadow-sm">
+                                이 날만 삭제
+                              </button>
+                              <button onClick={() => deleteAllRelatedEvents(ev)} className="flex-1 bg-rose-50 hover:bg-rose-100 text-rose-500 py-2.5 rounded-xl text-[11px] font-black transition-colors shadow-sm">
+                                전부 삭제
+                              </button>
+                              <button onClick={() => setDeleteConfirmId(null)} className="px-4 bg-slate-50 hover:bg-slate-100 text-slate-400 rounded-xl text-[11px] font-black transition-colors">
+                                취소
+                              </button>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
                       </div>
                     );
                   })}
