@@ -24,6 +24,7 @@ export default function MissionControlCalendar() {
   const [events, setEvents] = useState<{[key: string]: Event[]}>({});
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string>("");
+  const [endDate, setEndDate] = useState<string>(""); // 🔥 종료일 추가
   const [eventText, setEventText] = useState("");
   const [activePerson, setActivePerson] = useState<'홍윤' | '윤우'>('홍윤');
   const [dDay, setDDay] = useState(0);
@@ -66,9 +67,26 @@ export default function MissionControlCalendar() {
   const saveEvent = async () => {
     if (!eventText.trim() || !selectedDate) return;
     
-    const { data, error } = await supabase.from('events').insert([
-      { text: eventText, person: activePerson, event_date: selectedDate }
-    ]).select();
+    // 🔥 시작일부터 종료일까지 날짜 배열 만들기
+    let datesToSave = [selectedDate];
+    if (endDate && endDate >= selectedDate) {
+      datesToSave = [];
+      let curr = new Date(selectedDate);
+      const end = new Date(endDate);
+      while (curr <= end) {
+        datesToSave.push(`${curr.getFullYear()}-${String(curr.getMonth() + 1).padStart(2, '0')}-${String(curr.getDate()).padStart(2, '0')}`);
+        curr.setDate(curr.getDate() + 1);
+      }
+    }
+
+    // 금고에 한 번에 싹 밀어넣기
+    const inserts = datesToSave.map(date => ({
+      text: eventText,
+      person: activePerson,
+      event_date: date
+    }));
+
+    const { data, error } = await supabase.from('events').insert(inserts).select();
 
     if (error) {
       alert("금고 저장 실패! 막내를 부르십시오.");
@@ -76,13 +94,17 @@ export default function MissionControlCalendar() {
     }
 
     if (data) {
-      const newEvent = data[0];
-      setEvents(prev => ({
-        ...prev,
-        [selectedDate]: [...(prev[selectedDate] || []), newEvent]
-      }));
+      setEvents(prev => {
+        const next = { ...prev };
+        data.forEach(newEvent => {
+          if (!next[newEvent.event_date]) next[newEvent.event_date] = [];
+          next[newEvent.event_date].push(newEvent);
+        });
+        return next;
+      });
       setIsModalOpen(false);
       setEventText("");
+      setEndDate("");
     }
   };
 
@@ -150,7 +172,7 @@ export default function MissionControlCalendar() {
               const dayEvents = events[dateStr] || [];
               const isToday = new Date().toDateString() === new Date(year, month, day).toDateString();
               return (
-                <div key={day} onClick={() => { setSelectedDate(dateStr); setEventText(""); setIsModalOpen(true); }}
+                <div key={day} onClick={() => { setSelectedDate(dateStr); setEventText(""); setEndDate(""); setIsModalOpen(true); }}
                   className={`relative flex flex-col items-center justify-start pt-1.5 pb-1 rounded-lg border transition-all min-h-[4rem] overflow-hidden ${isToday ? 'bg-purple-100 border-purple-200 shadow-inner' : 'bg-white border-transparent active:bg-purple-50'}`}>
                   <span className={`text-sm font-black mb-1 ${isToday ? 'text-purple-800' : 'text-slate-700'}`}>{day}</span>
                   <div className="w-full px-1 flex flex-col gap-0.5">
@@ -174,10 +196,19 @@ export default function MissionControlCalendar() {
               onClick={() => setIsModalOpen(false)}
             >
               <div className="w-full max-w-[430px] bg-white rounded-t-[2.5rem] p-8 shadow-2xl max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-                <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-xl font-black text-purple-950 italic">{selectedDate}</h2>
-                  <button onClick={() => setIsModalOpen(false)} className="bg-purple-50 text-purple-600 px-5 py-2.5 rounded-xl text-xs font-black">닫기</button>
+                
+                {/* 🔥 상단 날짜 및 종료일 선택 영역 */}
+                <div className="flex justify-between items-start mb-6">
+                  <div className="flex flex-col">
+                    <h2 className="text-xl font-black text-purple-950 italic">{selectedDate}</h2>
+                    <div className="flex items-center gap-2 mt-2 bg-purple-50/50 p-2 rounded-lg">
+                      <span className="text-xs font-bold text-purple-600">~ 종료일:</span>
+                      <input type="date" min={selectedDate} value={endDate} onChange={(e) => setEndDate(e.target.value)} className="bg-white text-purple-900 text-xs font-bold p-1 rounded outline-none border border-purple-100" />
+                    </div>
+                  </div>
+                  <button onClick={() => { setIsModalOpen(false); setEndDate(""); }} className="bg-purple-50 text-purple-600 px-5 py-2.5 rounded-xl text-xs font-black mt-1">닫기</button>
                 </div>
+
                 <div className="space-y-3 mb-8">
                   {events[selectedDate]?.map(ev => (
                     <div key={ev.id} className={`flex justify-between items-center p-4 rounded-2xl border ${ev.person === '홍윤' ? 'bg-blue-50 border-blue-100' : 'bg-pink-50 border-pink-100'}`}>
