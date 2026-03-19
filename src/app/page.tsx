@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 interface Event {
   id: number;
   text: string;
-  person: '홍윤' | '윤우'; // 윤우 호칭 유지
+  person: '홍윤' | '윤우';
   allDay: boolean;
   startDate: string;
   endDate: string;
@@ -33,7 +33,7 @@ export default function MissionControlCalendar() {
 
   useEffect(() => {
     setIsMounted(true);
-    const start = new Date("2023-12-24"); // 기념일 유지
+    const start = new Date("2023-12-24");
     const today = new Date();
     const diff = Math.floor((today.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
     setDDay(diff + 1);
@@ -81,7 +81,6 @@ export default function MissionControlCalendar() {
 
   if (!isMounted) return null;
 
-  // --- 로그인 화면 (연보라 톤 적용) ---
   if (!isUnlocked) {
     return (
       <div className="fixed inset-0 bg-[#F8F7FF] flex items-center justify-center font-sans">
@@ -106,7 +105,6 @@ export default function MissionControlCalendar() {
     <div className="min-h-screen bg-[#F8F7FF] flex flex-col items-center font-sans text-slate-900 overflow-hidden">
       <div className="w-full max-w-[430px] flex flex-col min-h-screen relative bg-white shadow-2xl">
         
-        {/* 헤더: 연보라 포인트 */}
         <div className="px-6 pt-16 pb-6 flex items-end justify-between border-b border-purple-50">
           <div>
             <h1 className="text-3xl font-black tracking-tighter text-purple-950">{month + 1}월</h1>
@@ -121,7 +119,6 @@ export default function MissionControlCalendar() {
           </div>
         </div>
 
-        {/* 캘린더 그리드: 연보라 감성 스와이프 */}
         <motion.div 
           key={month}
           initial={{ opacity: 0, x: 50 }}
@@ -134,24 +131,28 @@ export default function MissionControlCalendar() {
             if (info.offset.x > 100) changeMonth(-1); 
             else if (info.offset.x < -100) changeMonth(1); 
           }}
-          className="px-3 pt-4 flex-grow cursor-grab active:cursor-grabbing"
+          className="px-2 pt-4 flex-grow cursor-grab active:cursor-grabbing"
         >
           <div className="grid grid-cols-7 mb-3 text-[10px] font-black text-center text-purple-200 uppercase italic tracking-wider">
             {['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'].map((d, i) => <div key={d} className={i === 0 ? 'text-red-300' : i === 6 ? 'text-blue-300' : ''}>{d}</div>)}
           </div>
-          <div className="grid grid-cols-7 text-center gap-0.5">
-            {blanks.map(b => <div key={`b-${b}`} className="aspect-square bg-purple-50/30 rounded-lg" />)}
+          <div className="grid grid-cols-7 text-center gap-1">
+            {blanks.map(b => <div key={`b-${b}`} className="min-h-[4rem] bg-purple-50/30 rounded-lg" />)}
             {days.map(day => {
               const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
               const dayEvents = events[dateStr] || [];
               const isToday = new Date().toDateString() === new Date(year, month, day).toDateString();
               return (
                 <div key={day} onClick={() => { setSelectedDate(dateStr); setEndDateStr(dateStr); setEventText(""); setIsModalOpen(true); }}
-                  className={`aspect-square relative flex flex-col items-center justify-start pt-1.5 rounded-lg border transition-all ${isToday ? 'bg-purple-100 border-purple-200 shadow-inner' : 'bg-white border-transparent active:bg-purple-50'}`}>
-                  <span className={`text-sm font-black ${isToday ? 'text-purple-800' : 'text-slate-700'}`}>{day}</span>
-                  <div className="flex gap-0.5 mt-1">
-                    {dayEvents.slice(0, 3).map((ev, i) => (
-                      <div key={i} className={`w-1.5 h-1.5 rounded-full shadow-xs ${ev.person === '홍윤' ? 'bg-blue-400' : 'bg-pink-400'}`} />
+                  className={`relative flex flex-col items-center justify-start pt-1.5 pb-1 rounded-lg border transition-all min-h-[4rem] overflow-hidden ${isToday ? 'bg-purple-100 border-purple-200 shadow-inner' : 'bg-white border-transparent active:bg-purple-50'}`}>
+                  <span className={`text-sm font-black mb-1 ${isToday ? 'text-purple-800' : 'text-slate-700'}`}>{day}</span>
+                  
+                  {/* 형님, 이 부분이 점을 지우고 다시 글씨가 나오게 만든 핵심 구역입니다! */}
+                  <div className="w-full px-1 flex flex-col gap-0.5">
+                    {dayEvents.slice(0, 2).map((ev, i) => (
+                      <div key={i} className={`text-[9px] font-bold px-1 py-0.5 rounded-sm truncate w-full text-left ${ev.person === '홍윤' ? 'bg-blue-100 text-blue-800' : 'bg-pink-100 text-pink-800'}`}>
+                        {ev.text}
+                      </div>
                     ))}
                   </div>
                 </div>
@@ -160,12 +161,10 @@ export default function MissionControlCalendar() {
           </div>
         </motion.div>
 
-        {/* 하단 설명 (연보라) */}
-        <div className="p-5 text-center text-[10px] text-purple-200 italic font-medium bg-purple-50/50">
+        <div className="p-5 text-center text-[10px] text-purple-200 italic font-medium bg-purple-50/50 mt-4">
           옆으로 밀어서 달을 변경하세요 (SWIPE)
         </div>
 
-        {/* 등록 모달 (연보라 톤) */}
         <AnimatePresence>
           {isModalOpen && (
             <motion.div 
