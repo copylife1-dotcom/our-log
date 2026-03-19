@@ -1,11 +1,11 @@
 "use client";
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion'; // 스와이프 애니메이션용
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface Event {
   id: number;
   text: string;
-  person: '홍윤' | '윤우'; // '그분' -> '윤우'로 수정
+  person: '홍윤' | '윤우'; // 윤우 호칭 유지
   allDay: boolean;
   startDate: string;
   endDate: string;
@@ -33,7 +33,7 @@ export default function MissionControlCalendar() {
 
   useEffect(() => {
     setIsMounted(true);
-    const start = new Date("2023-12-24");
+    const start = new Date("2023-12-24"); // 기념일 유지
     const today = new Date();
     const diff = Math.floor((today.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
     setDDay(diff + 1);
@@ -80,13 +80,16 @@ export default function MissionControlCalendar() {
   };
 
   if (!isMounted) return null;
+
+  // --- 로그인 화면 (연보라 톤 적용) ---
   if (!isUnlocked) {
     return (
-      <div className="fixed inset-0 bg-white flex items-center justify-center font-sans">
-        <div className="w-full max-w-[400px] p-10 text-center">
-          <h2 className="text-2xl font-bold mb-8 italic">OUR LOG</h2>
-          <input type="password" value={accessCode} onChange={(e) => setAccessCode(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleUnlock()} placeholder="비밀번호" className="w-full border-b-2 border-slate-100 p-3 text-center outline-none mb-6" />
-          <button onClick={handleUnlock} className="w-full bg-black text-white p-4 rounded-lg font-bold">접속</button>
+      <div className="fixed inset-0 bg-[#F8F7FF] flex items-center justify-center font-sans">
+        <div className="w-full max-w-[400px] p-10 text-center bg-white rounded-3xl shadow-xl border border-purple-50">
+          <h2 className="text-3xl font-black mb-2 tracking-tighter italic text-purple-900">OUR LOG</h2>
+          <p className="text-xs font-bold text-purple-300 mb-10 uppercase tracking-widest">Only for the Real Power & The Partner</p>
+          <input type="password" value={accessCode} onChange={(e) => setAccessCode(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleUnlock()} placeholder="비밀번호" className="w-full bg-purple-50 border-none rounded-2xl p-5 text-center text-lg font-black shadow-inner outline-none mb-4 focus:ring-4 focus:ring-purple-200 transition-all placeholder:text-purple-200" />
+          <button onClick={handleUnlock} className="w-full bg-purple-600 text-white p-5 rounded-2xl text-sm font-black shadow-lg active:scale-95 transition-all italic tracking-tight">UNLOCK SYSTEM</button>
         </div>
       </div>
     );
@@ -100,50 +103,55 @@ export default function MissionControlCalendar() {
   const blanks = Array.from({ length: firstDayOfMonth }, (_, i) => i);
 
   return (
-    <div className="min-h-screen bg-white flex flex-col items-center font-sans text-slate-900 overflow-hidden">
-      <div className="w-full max-w-[430px] flex flex-col min-h-screen relative">
+    <div className="min-h-screen bg-[#F8F7FF] flex flex-col items-center font-sans text-slate-900 overflow-hidden">
+      <div className="w-full max-w-[430px] flex flex-col min-h-screen relative bg-white shadow-2xl">
         
-        {/* 헤더 */}
-        <div className="px-6 pt-16 pb-8 flex items-end justify-between">
+        {/* 헤더: 연보라 포인트 */}
+        <div className="px-6 pt-16 pb-6 flex items-end justify-between border-b border-purple-50">
           <div>
-            <h1 className="text-3xl font-bold tracking-tighter">{month + 1}월</h1>
-            <span className="text-slate-400 font-medium">{year}</span>
+            <h1 className="text-3xl font-black tracking-tighter text-purple-950">{month + 1}월</h1>
+            <span className="text-purple-300 font-bold font-mono">{year}</span>
           </div>
-          <div className="text-right">
-            <span className="text-sm font-bold text-red-500">{dDay}일 ❤️</span>
+          <div className="flex flex-col items-end gap-1.5">
+            <span className="text-xs font-black text-purple-700 bg-purple-50 px-3 py-1.5 rounded-full shadow-sm">{dDay}일 ❤️</span>
+            <div className="flex gap-1.5">
+               <button onClick={() => changeMonth(-1)} className="p-1 text-purple-200 font-black">{"<"}</button>
+               <button onClick={() => changeMonth(1)} className="p-1 text-purple-200 font-black">{">"}</button>
+            </div>
           </div>
         </div>
 
-        {/* 캘린더 그리드 + 스와이프 기능 적용 */}
+        {/* 캘린더 그리드: 연보라 감성 스와이프 */}
         <motion.div 
           key={month}
-          initial={{ opacity: 0, x: 20 }}
+          initial={{ opacity: 0, x: 50 }}
           animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: -20 }}
+          exit={{ opacity: 0, x: -50 }}
+          transition={{ type: "spring", damping: 30, stiffness: 300 }}
           drag="x"
           dragConstraints={{ left: 0, right: 0 }}
           onDragEnd={(e, info) => {
-            if (info.offset.x > 100) changeMonth(-1); // 오른쪽으로 밀면 저번달
-            else if (info.offset.x < -100) changeMonth(1); // 왼쪽으로 밀면 다음달
+            if (info.offset.x > 100) changeMonth(-1); 
+            else if (info.offset.x < -100) changeMonth(1); 
           }}
-          className="px-4 flex-grow cursor-grab active:cursor-grabbing"
+          className="px-3 pt-4 flex-grow cursor-grab active:cursor-grabbing"
         >
-          <div className="grid grid-cols-7 mb-4 text-xs font-bold text-center text-slate-200 uppercase">
-            {['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'].map((d, i) => <div key={d} className={i === 0 ? 'text-red-200' : ''}>{d}</div>)}
+          <div className="grid grid-cols-7 mb-3 text-[10px] font-black text-center text-purple-200 uppercase italic tracking-wider">
+            {['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'].map((d, i) => <div key={d} className={i === 0 ? 'text-red-300' : i === 6 ? 'text-blue-300' : ''}>{d}</div>)}
           </div>
-          <div className="grid grid-cols-7 text-center">
-            {blanks.map(b => <div key={`b-${b}`} className="aspect-square" />)}
+          <div className="grid grid-cols-7 text-center gap-0.5">
+            {blanks.map(b => <div key={`b-${b}`} className="aspect-square bg-purple-50/30 rounded-lg" />)}
             {days.map(day => {
               const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
               const dayEvents = events[dateStr] || [];
               const isToday = new Date().toDateString() === new Date(year, month, day).toDateString();
               return (
                 <div key={day} onClick={() => { setSelectedDate(dateStr); setEndDateStr(dateStr); setEventText(""); setIsModalOpen(true); }}
-                  className="aspect-square relative flex flex-col items-center justify-start pt-2">
-                  <span className={`text-sm font-medium ${isToday ? 'text-red-500 font-bold' : 'text-slate-700'}`}>{day}</span>
+                  className={`aspect-square relative flex flex-col items-center justify-start pt-1.5 rounded-lg border transition-all ${isToday ? 'bg-purple-100 border-purple-200 shadow-inner' : 'bg-white border-transparent active:bg-purple-50'}`}>
+                  <span className={`text-sm font-black ${isToday ? 'text-purple-800' : 'text-slate-700'}`}>{day}</span>
                   <div className="flex gap-0.5 mt-1">
                     {dayEvents.slice(0, 3).map((ev, i) => (
-                      <div key={i} className={`w-1 h-1 rounded-full ${ev.person === '홍윤' ? 'bg-blue-400' : 'bg-pink-400'}`} />
+                      <div key={i} className={`w-1.5 h-1.5 rounded-full shadow-xs ${ev.person === '홍윤' ? 'bg-blue-400' : 'bg-pink-400'}`} />
                     ))}
                   </div>
                 </div>
@@ -152,45 +160,46 @@ export default function MissionControlCalendar() {
           </div>
         </motion.div>
 
-        {/* 하단 설명 */}
-        <div className="p-6 text-center text-[10px] text-slate-300 italic">
-          옆으로 밀어서 달을 변경하세요
+        {/* 하단 설명 (연보라) */}
+        <div className="p-5 text-center text-[10px] text-purple-200 italic font-medium bg-purple-50/50">
+          옆으로 밀어서 달을 변경하세요 (SWIPE)
         </div>
 
-        {/* 등록 모달 */}
+        {/* 등록 모달 (연보라 톤) */}
         <AnimatePresence>
           {isModalOpen && (
             <motion.div 
-              initial={{ y: "100%" }}
-              animate={{ y: 0 }}
-              exit={{ y: "100%" }}
-              transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="fixed inset-0 z-[100] bg-black/20 backdrop-blur-sm flex items-end justify-center"
+              initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", damping: 25, stiffness: 200 }}
+              className="fixed inset-0 z-[100] bg-purple-950/20 backdrop-blur-sm flex items-end justify-center"
+              onClick={() => setIsModalOpen(false)}
             >
-              <div className="w-full max-w-[430px] bg-white rounded-t-3xl p-8 shadow-2xl max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+              <div className="w-full max-w-[430px] bg-white rounded-t-[2.5rem] p-8 shadow-2xl max-h-[85vh] overflow-y-auto border-t-2 border-purple-100" onClick={(e) => e.stopPropagation()}>
                 <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-lg font-bold">{selectedDate}</h2>
-                  <button onClick={() => setIsModalOpen(false)} className="text-slate-400 font-bold">닫기</button>
+                  <div>
+                    <h2 className="text-xl font-black text-purple-950 tracking-tighter uppercase italic">{selectedDate}</h2>
+                    <p className="text-[10px] font-bold text-purple-300">일정 등록 및 관리 (Mission Record)</p>
+                  </div>
+                  <button onClick={() => setIsModalOpen(false)} className="bg-purple-50 text-purple-600 px-5 py-2.5 rounded-xl text-xs font-black shadow-sm">닫기</button>
                 </div>
                 <div className="space-y-3 mb-8">
                   {events[selectedDate]?.map(ev => (
-                    <div key={ev.id} className="flex justify-between items-center p-4 bg-slate-50 rounded-xl">
-                      <span className="text-sm font-bold text-slate-700">[{ev.person}] {ev.text}</span>
-                      <button onClick={() => { const n={...events}; n[selectedDate]=n[selectedDate].filter(x=>x.id!==ev.id); setEvents(n); }} className="text-red-300 text-xs font-bold">삭제</button>
+                    <div key={ev.id} className={`flex justify-between items-center p-4 rounded-2xl border ${ev.person === '홍윤' ? 'bg-blue-50 border-blue-100' : 'bg-pink-50 border-pink-100'}`}>
+                      <span className={`text-[13px] font-black italic ${ev.person === '홍윤' ? 'text-blue-800' : 'text-pink-800'}`}>[{ev.person}] {ev.text}</span>
+                      <button onClick={() => { const n={...events}; n[selectedDate]=n[selectedDate].filter(x=>x.id!==ev.id); setEvents(n); }} className="text-slate-300 text-xs font-bold p-1">삭제</button>
                     </div>
                   ))}
                 </div>
-                <div className="space-y-4">
-                  <input type="text" value={eventText} onChange={(e) => setEventText(e.target.value)} placeholder="일정 내용" className="w-full border-b border-slate-200 py-3 outline-none focus:border-black font-medium" />
+                <div className="space-y-4 border-t border-purple-50 pt-6">
+                  <input type="text" value={eventText} onChange={(e) => setEventText(e.target.value)} placeholder="어떤 일정이 있나요? (일정 내용)" className="w-full bg-purple-50 border-none rounded-2xl p-4.5 font-black text-sm outline-none focus:ring-4 focus:ring-purple-100 placeholder:text-purple-200 shadow-inner" />
                   <div className="flex gap-2">
-                    <button onClick={() => setActivePerson('홍윤')} className={`flex-1 py-3 rounded-xl text-xs font-bold ${activePerson === '홍윤' ? 'bg-blue-500 text-white' : 'bg-slate-100 text-slate-400'}`}>홍윤</button>
-                    <button onClick={() => setActivePerson('윤우')} className={`flex-1 py-3 rounded-xl text-xs font-bold ${activePerson === '윤우' ? 'bg-pink-500 text-white' : 'bg-slate-100 text-slate-400'}`}>윤우</button>
+                    <button onClick={() => setActivePerson('홍윤')} className={`flex-1 py-3.5 rounded-xl text-xs font-black transition-all ${activePerson === '홍윤' ? 'bg-blue-600 text-white shadow-md' : 'bg-slate-50 text-slate-400'}`}>홍윤</button>
+                    <button onClick={() => setActivePerson('윤우')} className={`flex-1 py-3.5 rounded-xl text-xs font-black transition-all ${activePerson === '윤우' ? 'bg-pink-500 text-white shadow-md' : 'bg-slate-50 text-slate-400'}`}>윤우</button>
                   </div>
-                  <div>
-                    <span className="text-[10px] font-bold text-slate-400 uppercase italic">종료 날짜</span>
-                    <input type="date" value={endDateStr} onChange={(e) => setEndDateStr(e.target.value)} className="w-full mt-1 bg-slate-50 p-3 rounded-xl text-xs font-bold" />
+                  <div className="pt-2">
+                    <span className="text-[10px] font-black text-purple-300 uppercase italic tracking-wider ml-1">일정 종료 날짜 (장기 일정 시 필수 선택)</span>
+                    <input type="date" value={endDateStr} onChange={(e) => setEndDateStr(e.target.value)} className="w-full mt-1.5 bg-purple-50 border-none p-4 rounded-xl text-xs font-bold outline-none shadow-inner" />
                   </div>
-                  <button onClick={saveEvent} className="w-full bg-black text-white p-4 rounded-xl font-bold">일정 등록</button>
+                  <button onClick={saveEvent} className="w-full bg-purple-900 text-white p-4.5 rounded-2xl font-black mt-5 shadow-lg active:scale-95 transition-all uppercase italic tracking-tight">일정 등록</button>
                 </div>
               </div>
             </motion.div>
